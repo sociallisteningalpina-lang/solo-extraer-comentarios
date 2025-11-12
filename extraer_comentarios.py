@@ -19,7 +19,7 @@ SOLO_PRIMER_POST = False
 
 # LISTA DE URLs A PROCESAR
 URLS_A_PROCESAR = [
-   # --- Facebook URLs ---
+    # --- Facebook URLs ---
     "https://www.facebook.com/story.php?story_fbid=1235330138639223&id=100064867445065&mibextid=wwXIfr&rdid=OBvLrt1QMQHg95Ys#",
     "https://www.facebook.com/story.php?story_fbid=1236406648531572&id=100064867445065&mibextid=wwXIfr&rdid=bopYlxfPviXrOw4f#",
     "https://www.facebook.com/story.php?story_fbid=1237033971802173&id=100064867445065&mibextid=wwXIfr&rdid=GciBjebFycawcdjq#",
@@ -76,7 +76,6 @@ URLS_A_PROCESAR = [
     "https://www.tiktok.com/@alpinacol/video/7565662822005312776?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
     "https://www.tiktok.com/@alpinacol/video/7566433432880811271?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
     "https://www.tiktok.com/@alpinacol/video/7567511571786698002?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
-
 ]
 
 # INFORMACIÓN DE CAMPAÑA
@@ -99,6 +98,7 @@ class SocialMediaScraper:
         if any(d in url for d in ['facebook.com', 'fb.com', 'fb.me']): return 'facebook'
         if 'instagram.com' in url: return 'instagram'
         if 'tiktok.com' in url or 'vt.tiktok.com' in url: return 'tiktok'
+        if 'linkedin.com' in url: return 'linkedin'
         return None
 
     def clean_url(self, url):
@@ -174,6 +174,34 @@ class SocialMediaScraper:
             return self._process_tiktok_results(items, url, post_number, campaign_info)
         except Exception as e:
             logger.error(f"Fatal error in scrape_tiktok_comments: {e}")
+            return []
+
+    def scrape_linkedin_comments(self, url, max_comments=500, campaign_info=None, post_number=1):
+        try:
+            logger.info(f"Processing LinkedIn Post {post_number}: {url}")
+            
+            # Configuración para el scraper de LinkedIn
+            run_input = {
+                "startUrls": [url],
+                "maxComments": max_comments,
+                "scrapeComments": True,
+                "scrapePostInfo": True
+            }
+            
+            # Usar el actor de LinkedIn de Apify
+            run = self.client.actor("apify/linkedin-post-comments-scraper").call(run_input=run_input)
+            run_status = self._wait_for_run_finish(run)
+            
+            if not run_status or run_status["status"] != "SUCCEEDED":
+                logger.error(f"LinkedIn extraction failed. Status: {run_status.get('status', 'UNKNOWN')}")
+                return []
+            
+            items = self.client.dataset(run["defaultDatasetId"]).list_items().items
+            logger.info(f"Extraction complete: {len(items)} items found.")
+            
+            return self._process_linkedin_results(items, url, post_number, campaign_info)
+        except Exception as e:
+            logger.error(f"Fatal error in scrape_linkedin_comments: {e}")
             return []
 
     def _process_facebook_results(self, items, url, post_number, campaign_info):
@@ -259,6 +287,76 @@ class SocialMediaScraper:
             }
             processed.append(comment_data)
         logger.info(f"Processed {len(processed)} TikTok comments.")
+        return processed
+
+    def _process_linkedin_results(self, items, url, post_number, campaign_info):
+        processed = []
+        possible_date_fields = ['createdAt', 'created', 'timestamp', 'time', 'publishedAt']
+        
+        for item in items:
+            # LinkedIn puede retornar los comentarios de diferentes formas
+            # Intentar extraer comentarios del item
+            comments_list = []
+            
+            if 'comments' in item and item['comments']:
+                comments_list = item['comments']
+            elif 'comment' in item:
+                comments_list = [item]
+            elif 'text' in item:  # Es directamente un comentario
+                comments_list = [item]
+            
+            for comment in comments_list:
+                # Extraer fecha de creación
+                created_time = None
+                for field in possible_date_fields:
+                    if field in comment and comment[field]:
+                        created_time = comment[field]
+                        break
+                
+                # Extraer información del autor
+                author_name = ''
+                author_url = ''
+                
+                if 'author' in comment:
+                    author_info = comment['author']
+                    if isinstance(author_info, dict):
+                        author_name = author_info.get('name', '') or author_info.get('firstName', '') + ' ' + author_info.get('lastName', '')
+                        author_url = author_info.get('url', '') or author_info.get('profileUrl', '')
+                    else:
+                        author_name = str(author_info)
+                elif 'authorName' in comment:
+                    author_name = comment.get('authorName', '')
+                    author_url = comment.get('authorUrl', '')
+                elif 'firstName' in comment or 'lastName' in comment:
+                    author_name = f"{comment.get('firstName', '')} {comment.get('lastName', '')}".strip()
+                    author_url = comment.get('profileUrl', '')
+                
+                # Extraer texto del comentario
+                comment_text = comment.get('text', '') or comment.get('commentText', '') or comment.get('content', '')
+                
+                # Extraer métricas
+                likes_count = comment.get('likesCount', 0) or comment.get('numLikes', 0) or comment.get('likes', 0)
+                replies_count = comment.get('repliesCount', 0) or comment.get('numReplies', 0) or comment.get('replies', 0)
+                
+                comment_data = {
+                    **campaign_info,
+                    'post_url': normalize_url(url),
+                    'post_url_original': url,
+                    'post_number': post_number,
+                    'platform': 'LinkedIn',
+                    'author_name': self.fix_encoding(author_name),
+                    'author_url': author_url,
+                    'comment_text': self.fix_encoding(comment_text),
+                    'created_time': created_time,
+                    'likes_count': likes_count,
+                    'replies_count': replies_count,
+                    'is_reply': comment.get('isReply', False) or 'parentCommentId' in comment,
+                    'parent_comment_id': comment.get('parentCommentId'),
+                    'created_time_raw': str(comment)
+                }
+                processed.append(comment_data)
+        
+        logger.info(f"Processed {len(processed)} LinkedIn comments.")
         return processed
 
 
@@ -551,6 +649,10 @@ def run_extraction():
             comments = scraper.scrape_instagram_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
         elif platform == 'tiktok':
             comments = scraper.scrape_tiktok_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
+        elif platform == 'linkedin':
+            comments = scraper.scrape_linkedin_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
+        else:
+            logger.warning(f"Unknown platform for URL: {url}")
         
         if not comments:
             registry_entry = create_post_registry_entry(url, platform, CAMPAIGN_INFO)
@@ -623,14 +725,3 @@ def run_extraction():
 
 if __name__ == "__main__":
     run_extraction()
-
-
-
-
-
-
-
-
-
-
-
