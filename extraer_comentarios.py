@@ -6,7 +6,8 @@ import logging
 import html
 import unicodedata
 import os
-import random # <-- MODIFICACIÓN: Se importa la librería para generar números aleatorios
+import random
+from pathlib import Path
 
 # Configurar logging más limpio
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -18,67 +19,64 @@ SOLO_PRIMER_POST = False
 
 # LISTA DE URLs A PROCESAR
 URLS_A_PROCESAR = [
-    # INSTAGRAM
-    "https://www.instagram.com/p/DOL-s8yAEpK/",
-    "https://www.instagram.com/p/DOL-vK2AEau/",
-    "https://www.instagram.com/p/DN8-4jkgPZ9/",
-    "https://www.instagram.com/p/DN8-jkkgLpv/",
-    "https://www.instagram.com/p/DOL-utugPsM/",
-    "https://www.instagram.com/p/DOL-s98gFfw/",
-    "https://www.instagram.com/p/DOL_ShzgF8e/",
-    "https://www.instagram.com/p/DOL-m7CgKdV/",
-    "https://www.instagram.com/p/DOL-mwPgJuw/",
-    "https://www.instagram.com/p/DOL-oBdgA01/",
-    "https://www.instagram.com/p/DOL-n6OAOXo/",
-    "https://www.instagram.com/p/DOL-m3ngF3N/",
-    "https://www.instagram.com/p/DOL-ms9APs0/",
+   # --- Facebook URLs ---
+    "https://www.facebook.com/story.php?story_fbid=1235330138639223&id=100064867445065&mibextid=wwXIfr&rdid=OBvLrt1QMQHg95Ys#",
+    "https://www.facebook.com/story.php?story_fbid=1236406648531572&id=100064867445065&mibextid=wwXIfr&rdid=bopYlxfPviXrOw4f#",
+    "https://www.facebook.com/story.php?story_fbid=1237033971802173&id=100064867445065&mibextid=wwXIfr&rdid=GciBjebFycawcdjq#",
+    "https://www.facebook.com/alpina/videos/si-pudieras-crear-tu-propio-mundo-delicioso-qu%C3%A9-sabor-no-podr%C3%ADa-faltar-en-tu-his/3276554035854547/?mibextid=wwXIfr&rdid=DH0YIo3NiKQ0N2qI",
+    "https://www.facebook.com/story.php?story_fbid=1243770941128476&id=100064867445065&mibextid=wwXIfr&rdid=siKhUU3rPYyJO9sr#",
+    "https://www.facebook.com/story.php?story_fbid=1247846194054284&id=100064867445065&mibextid=wwXIfr&rdid=2bXCyC8OiDsJv1Uj#",
+    "https://www.facebook.com/story.php?story_fbid=1250598810445689&id=100064867445065&mibextid=wwXIfr&rdid=B8ExMaupT67bGniU#",
+    "https://www.facebook.com/reel/1165392409116620",
+    "https://www.facebook.com/reel/1923343125269996",
+    "https://www.facebook.com/story.php?story_fbid=1259912209514349&id=100064867445065&mibextid=wwXIfr&rdid=04nSuZsM6RLVEhrN#",
+    "https://www.facebook.com/reel/1523416945502720",
     
-    # FACEBOOK - Demo/Ads
-    "https://www.facebook.com/?feed_demo_ad=120233418145910432&h=AQCP9RxlmBjXz0LtaJAh",
-    "https://www.facebook.com/?feed_demo_ad=120233417504070432&h=AQAQCH3Rl_lce0gF0_4",
-    "https://www.facebook.com/?feed_demo_ad=120233417168840432&h=AQA4sGqS4BetjNxbaVU",
-    "https://www.facebook.com/?feed_demo_ad=120233417074240432&h=AQB06AurVyvI00lu8K4",
-    "https://www.facebook.com/?feed_demo_ad=120233054832200432&h=AQDDns3pft0Vh4Z-2iA",
-    "https://www.facebook.com/?feed_demo_ad=120233063358500432&h=AQB2gbbCcn_X0UX-hOI",
-    "https://www.facebook.com/?feed_demo_ad=120233055819280432&h=AQBgqCgBPhgHaSvBmjQ",
-    "https://www.facebook.com/?feed_demo_ad=120233418582750432&h=AQA3C-BhfkEDKjRWGuc",
-    "https://www.facebook.com/?feed_demo_ad=120233555370800432&h=AQBWtXEcnrVRvvpNVEk",
-    "https://www.facebook.com/?feed_demo_ad=120233418238300432&h=AQCshb4xg4w3aZQNhso",
-    "https://www.facebook.com/?feed_demo_ad=120233554870910432&h=AQBbgdd3MGvw9q6WCwY",
-    "https://www.facebook.com/?feed_demo_ad=120233417504070432&h=AQAQCH3Rl_lce0gF7k0",
-    "https://www.facebook.com/?feed_demo_ad=120233418145910432&h=AQCP9RxlmBjXz0LtaJA",
+    # --- Instagram URLs ---
+    "https://www.instagram.com/reel/DPzBk2LDS1I/",
+    "https://www.instagram.com/reel/DQE_sqfjY9w/",
+    "https://www.instagram.com/reel/DPWflVQjcCN/?igsh=cGtsOTd3OGg2bmNi",
+    "https://www.instagram.com/reel/DPU2lPODZH8/?igsh=OXE1eHp5MHFwMjR3",
+    "https://www.instagram.com/reel/DPkAoZWEez1/?igsh=MTNuNmZqamNrN2R6eA%3D%3D",
+    "https://www.instagram.com/reel/DP6sfc0kd7Q/",
+    "https://www.instagram.com/reel/DQKhW44Dc7G/",
+    "https://www.instagram.com/reel/DLqWEU9O0kV/?igsh=MXF0ZDYzMGp5czd5NA%3D%3D",
+    "https://www.instagram.com/reel/DPRg3YrDfxb/?igsh=em95NmhraDd0OWo1",
+    "https://www.instagram.com/reel/DQXBRdmDU8x/",
+    "https://www.instagram.com/reel/DQfVIEFEYDp/",
     
-    # FACEBOOK - Posts
-    "https://www.facebook.com/100064867445065/posts/pfbid02tU1gU4dpz5E4hdSJQbQfHHRWQeebhrGLvGDdRwCfEENUfiJM7LBKg2ZXL8xjh6Qdl?dco_ad_id=120233418145910432",
-    "https://www.facebook.com/100064867445065/posts/pfbid09ESTvbRgHFXPvPnzu5Wuxc17mLHGzbvh3PXviVmWXTC63LtA7fwKWhoAmnoPCGLKl?dco_ad_id=120233417504070432",
-    "https://www.facebook.com/100064867445065/posts/pfbid0vhyQ3E2hLKNx7xAhucBeXJMXJQRevYeXPBqbjv8aLadNxYp5XSnYdasEHXTmTf4gl?dco_ad_id=120233417168840432",
-    "https://www.facebook.com/100064867445065/posts/pfbid02M6noi2G6CkPLtfRGQEzZw48B7i2pGmk2KrDTUixNn4inUUrxG47VFVVtsgjsVpGXl?dco_ad_id=120233417074240432",
-    "https://www.facebook.com/100064867445065/posts/pfbid04uas4JSTf7CfNJ7vygqn7LEq2kaRS43o2TgqHWuttDDG6A6DnrCLjtP2MFScAZwbl?dco_ad_id=120233054832200432",
-    "https://www.facebook.com/100064867445065/posts/pfbid0neLQsQFk4CkV8yBRRzcXEdBtA91Wt3C6RrHFz4QaUZevWDh1SzqUPCcWHiN31f3xl?dco_ad_id=120233063358500432",
-    "https://www.facebook.com/100064867445065/posts/pfbid0KRNkHEJBgq8mga9zMUZCcxGF44ZFTkDCR79aecj6UMVc1guCGFs1nxvxVMecBu8hl?dco_ad_id=120233055819280432",
-    "https://www.facebook.com/100064867445065/posts/pfbid02DMBD3zQxW4n6oSVNcbBR4CQZvuFtDVvrQTo7qBkFDnUXcCNzxzDK79rAk68C3kv5l?dco_ad_id=120233417504070432",
+    # --- LinkedIn URLs ---
+    "https://www.linkedin.com/posts/alpina_kefir-nutriciaejn-innovaciaejn-activity-7379200187421855744-f3IV?utm_medium=ios_app&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU&utm_source=social_share_video_v2&utm_campaign=share_via",
+    "https://www.linkedin.com/posts/alpina_en-las-tiendas-el-chocoramo-nunca-llega-activity-7379263504421322752-zYPg?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_nutriciaejn-sabor-alpina-activity-7379665501041446912-ad6q?utm_medium=ios_app&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU&utm_source=social_share_video_v2&utm_campaign=copy_link",
+    "https://www.linkedin.com/posts/alpina_transformaciaejn-snowflake-alpina-activity-7379886388609118208-HQ8o?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_la-semana-pasada-tuvimos-la-primera-edici%C3%B3n-activity-7381787988369887232-xvhZ?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_felices-de-compartir-que-nuestro-vicepresidente-activity-7382505229487071232-sVtH?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_quinquenios-cultura-alpina-activity-7383886982474526720-gX0G?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_sostenibilidad-daedamundialdelaalimentaciaejn-activity-7384712400005914624-ywo5/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_mercoempresas-calidad-nutriciaejn-activity-7384596941072023552-jQky/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_orgulloalpina-comunicacionesalpina-mercoempresas-activity-7384970212179189760-N-Js/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_alpinadesignchallenge-diseaeho-creatividad-activity-7386091344726790145-5J55/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_orgulloalpina-mercolaedderes-alpina-activity-7386499022666010624-V1AM/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_alpinista-cultura-alpina-activity-7388975340590735361-Eu9t/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_halloween-alpina-porunmundodelicioso-activity-7390088420678852608-aOuT/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
+    "https://www.linkedin.com/posts/alpina_halloween-cultura-alpina-activity-7390131282216656897-sRMo/?utm_source=share&utm_medium=member_ios&rcm=ACoAADkuiMUBJZnzpLq3OiK4VgznclwtUNghICU",
     
-    # FACEBOOK - Videos
-    "https://www.facebook.com/100064867445065/videos/759074660165987",
-    "https://www.facebook.com/100064867445065/videos/646994368025589",
-    "https://www.facebook.com/100064867445065/videos/1448503073025625",
-    "https://www.facebook.com/100064867445065/videos/2033891010750740",
-    "https://www.facebook.com/100064867445065/videos/1522847888884919",
-    "https://www.facebook.com/100064867445065/videos/830303536353287",
-    
-    # TIKTOK
-    "https://www.tiktok.com/@alpinacol/video/7542657663943838983?_r=1&_t=ZS-8zoRtzUAc5A",
-    "https://www.tiktok.com/@alpinacol/video/7541457975207136530?_r=1&_t=ZS-8zoRifAKgbK",
-    "https://www.tiktok.com/@alpinacol/video/7547743186593008916?_r=1&_t=ZS-8zoReoFAugR",
-    "https://www.tiktok.com/@alpinacol/video/7548118828790664456?_r=1&_t=ZS-8zoRa8RYbDu",
-    "https://www.tiktok.com/@alpinacol/video/7547746657144720660?_r=1&_t=ZS-8zoRVpEExWM",
-    # NUEVOS 24/09/2025
-    "https://www.tiktok.com/@Alpina/video/7548130480986639632?_r=1&_t=ZS-900eQOfqR8y",
-    "https://www.tiktok.com/@Alpina/video/7548129116541685009?_r=1&_t=ZS-900eP8KESlm",
-    "https://www.tiktok.com/@Alpina/video/7548117942119042322?_r=1&_t=ZS-900eGcSaFj5",
-    "https://www.tiktok.com/@user360907502/video/7542610432733859080?_r=1&_t=ZS-900eDVc8Hkg",
-    "https://www.tiktok.com/@Alpina/video/7548130532375186696?_r=1&_t=ZS-900eA9845DE",
-    "https://www.tiktok.com/@Alpina/video/7548130486535589136?_r=1&_t=ZS-900e6AOgLwt"
+    # --- TikTok URLs ---
+    "https://www.tiktok.com/@alpinacol/video/7556791556007595320?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7557158039497886988?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7557431230585670923?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7558647097495457036?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7559723322485804300?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7560006951145393464?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7561607354345622840?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7563482898062413064?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7564209147852508423?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7564554718664592658?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7565662822005312776?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7566433432880811271?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+    "https://www.tiktok.com/@alpinacol/video/7567511571786698002?is_from_webapp=1&sender_device=pc&web_id=7532866211194701318",
+
 ]
 
 # INFORMACIÓN DE CAMPAÑA
@@ -98,9 +96,9 @@ class SocialMediaScraper:
     def detect_platform(self, url):
         if pd.isna(url) or not url: return None
         url = str(url).lower()
-        if any(d in url for d in ['facebook.com', 'fb.com']): return 'facebook'
+        if any(d in url for d in ['facebook.com', 'fb.com', 'fb.me']): return 'facebook'
         if 'instagram.com' in url: return 'instagram'
-        if 'tiktok.com' in url: return 'tiktok'
+        if 'tiktok.com' in url or 'vt.tiktok.com' in url: return 'tiktok'
         return None
 
     def clean_url(self, url):
@@ -187,7 +185,22 @@ class SocialMediaScraper:
                 if field in comment and comment[field]:
                     created_time = comment[field]
                     break
-            comment_data = {**campaign_info, 'post_url': url, 'post_number': post_number, 'platform': 'Facebook', 'author_name': self.fix_encoding(comment.get('authorName')), 'author_url': comment.get('authorUrl'), 'comment_text': self.fix_encoding(comment.get('text')), 'created_time': created_time, 'likes_count': comment.get('likesCount', 0), 'replies_count': comment.get('repliesCount', 0), 'is_reply': False, 'parent_comment_id': None, 'created_time_raw': str(comment)}
+            comment_data = {
+                **campaign_info,
+                'post_url': normalize_url(url),
+                'post_url_original': url,
+                'post_number': post_number,
+                'platform': 'Facebook',
+                'author_name': self.fix_encoding(comment.get('authorName')),
+                'author_url': comment.get('authorUrl'),
+                'comment_text': self.fix_encoding(comment.get('text')),
+                'created_time': created_time,
+                'likes_count': comment.get('likesCount', 0),
+                'replies_count': comment.get('repliesCount', 0),
+                'is_reply': False,
+                'parent_comment_id': None,
+                'created_time_raw': str(comment)
+            }
             processed.append(comment_data)
         logger.info(f"Processed {len(processed)} Facebook comments.")
         return processed
@@ -204,7 +217,22 @@ class SocialMediaScraper:
                         created_time = comment[field]
                         break
                 author = comment.get('ownerUsername', '')
-                comment_data = {**campaign_info, 'post_url': url, 'post_number': post_number, 'platform': 'Instagram', 'author_name': self.fix_encoding(author), 'author_url': f"https://instagram.com/{author}", 'comment_text': self.fix_encoding(comment.get('text')), 'created_time': created_time, 'likes_count': comment.get('likesCount', 0), 'replies_count': 0, 'is_reply': False, 'parent_comment_id': None, 'created_time_raw': str(comment)}
+                comment_data = {
+                    **campaign_info,
+                    'post_url': normalize_url(url),
+                    'post_url_original': url,
+                    'post_number': post_number,
+                    'platform': 'Instagram',
+                    'author_name': self.fix_encoding(author),
+                    'author_url': f"https://instagram.com/{author}",
+                    'comment_text': self.fix_encoding(comment.get('text')),
+                    'created_time': created_time,
+                    'likes_count': comment.get('likesCount', 0),
+                    'replies_count': 0,
+                    'is_reply': False,
+                    'parent_comment_id': None,
+                    'created_time_raw': str(comment)
+                }
                 processed.append(comment_data)
         logger.info(f"Processed {len(processed)} Instagram comments.")
         return processed
@@ -213,17 +241,256 @@ class SocialMediaScraper:
         processed = []
         for comment in items:
             author_id = comment.get('user', {}).get('uniqueId', '')
-            comment_data = {**campaign_info, 'post_url': url, 'post_number': post_number, 'platform': 'TikTok', 'author_name': self.fix_encoding(comment.get('user', {}).get('nickname')), 'author_url': f"https://www.tiktok.com/@{author_id}", 'comment_text': self.fix_encoding(comment.get('text')), 'created_time': comment.get('createTime'), 'likes_count': comment.get('diggCount', 0), 'replies_count': comment.get('replyCommentTotal', 0), 'is_reply': 'replyToId' in comment, 'parent_comment_id': comment.get('replyToId'), 'created_time_raw': str(comment)}
+            comment_data = {
+                **campaign_info,
+                'post_url': normalize_url(url),
+                'post_url_original': url,
+                'post_number': post_number,
+                'platform': 'TikTok',
+                'author_name': self.fix_encoding(comment.get('user', {}).get('nickname')),
+                'author_url': f"https://www.tiktok.com/@{author_id}",
+                'comment_text': self.fix_encoding(comment.get('text')),
+                'created_time': comment.get('createTime'),
+                'likes_count': comment.get('diggCount', 0),
+                'replies_count': comment.get('replyCommentTotal', 0),
+                'is_reply': 'replyToId' in comment,
+                'parent_comment_id': comment.get('replyToId'),
+                'created_time_raw': str(comment)
+            }
             processed.append(comment_data)
         logger.info(f"Processed {len(processed)} TikTok comments.")
         return processed
 
+
+def normalize_url(url):
+    """
+    Normaliza una URL para comparación consistente.
+    EXCEPCIONES: 
+    - Preserva feed_demo_ad para Facebook Ad Preview
+    - Preserva tokens de fb.me/adspreview URLs
+    """
+    if pd.isna(url) or url == '':
+        return ''
+    
+    original_url = str(url).strip()
+    url_lower = original_url.lower()
+    
+    # CASO ESPECIAL 1: Facebook Ad Preview con feed_demo_ad
+    # Estos son anuncios diferentes y deben tratarse como URLs únicas
+    if 'facebook.com' in url_lower and 'feed_demo_ad=' in url_lower:
+        import re
+        match = re.search(r'feed_demo_ad=(\d+)', url_lower)
+        if match:
+            ad_id = match.group(1)
+            return f"https://www.facebook.com/ad_preview/{ad_id}"
+    
+    # CASO ESPECIAL 2: fb.me/adspreview URLs
+    # Formato: https://fb.me/adspreview/facebook/xxxxx o managedaccount/xxxxx
+    # El token al final es único por anuncio
+    if 'fb.me/adspreview/' in url_lower:
+        import re
+        # Extraer el tipo (facebook/managedaccount) y el token
+        match = re.search(r'fb\.me/adspreview/(facebook|managedaccount)/([a-z0-9]+)', url_lower, re.IGNORECASE)
+        if match:
+            ad_type = match.group(1)
+            token = match.group(2)
+            return f"https://fb.me/adspreview/{ad_type}/{token}"
+    
+    # Normalización estándar
+    url = url_lower
+    
+    # Eliminar parámetros de query (excepto para casos especiales arriba)
+    if '?' in url:
+        url = url.split('?')[0]
+    
+    # Eliminar barra final
+    if url.endswith('/'):
+        url = url[:-1]
+    
+    # Eliminar fragmentos (#)
+    if '#' in url:
+        url = url.split('#')[0]
+    
+    return url
+
+
+def create_post_registry_entry(url, platform, campaign_info):
+    """Crea una entrada de registro para una pauta procesada sin comentarios"""
+    return {
+        **campaign_info,
+        'post_url': normalize_url(url),
+        'post_url_original': url,
+        'post_number': None,
+        'platform': platform,
+        'author_name': None,
+        'author_url': None,
+        'comment_text': None,
+        'created_time': None,
+        'likes_count': 0,
+        'replies_count': 0,
+        'is_reply': False,
+        'parent_comment_id': None,
+        'created_time_raw': None
+    }
+
+
+def assign_consistent_post_numbers(df):
+    """Asigna números de pauta consistentes basados en el orden de primera aparición"""
+    if df.empty:
+        return df
+    
+    df_with_numbers = df[df['post_number'].notna()].copy()
+    existing_mapping = {}
+    
+    if not df_with_numbers.empty:
+        for url in df_with_numbers['post_url'].unique():
+            if pd.notna(url):
+                url_numbers = df_with_numbers[df_with_numbers['post_url'] == url]['post_number']
+                most_common = url_numbers.mode()
+                if len(most_common) > 0:
+                    existing_mapping[url] = int(most_common.iloc[0])
+    
+    all_urls = df['post_url'].dropna().unique()
+    new_urls = [url for url in all_urls if url not in existing_mapping]
+    
+    if existing_mapping:
+        next_number = max(existing_mapping.values()) + 1
+    else:
+        next_number = 1
+    
+    for url in new_urls:
+        existing_mapping[url] = next_number
+        next_number += 1
+    
+    df['post_number'] = df['post_url'].map(existing_mapping)
+    return df
+
+
+def load_existing_comments(filename):
+    """Carga los comentarios existentes del archivo Excel"""
+    if not Path(filename).exists():
+        logger.info(f"No existing file found: {filename}. Will create new file.")
+        return pd.DataFrame()
+    
+    try:
+        df_existing = pd.read_excel(filename, sheet_name='Comentarios')
+        logger.info(f"Loaded {len(df_existing)} existing rows from {filename}")
+        
+        # Normalizar cadenas vacías a NaN
+        if 'comment_text' in df_existing.columns:
+            df_existing['comment_text'] = df_existing['comment_text'].replace('', pd.NA)
+            df_existing['comment_text'] = df_existing['comment_text'].apply(
+                lambda x: pd.NA if isinstance(x, str) and x.strip() == '' else x
+            )
+        
+        # Crear post_url_original si no existe
+        if 'post_url_original' not in df_existing.columns:
+            logger.info("Creating post_url_original from post_url")
+            df_existing['post_url_original'] = df_existing['post_url'].copy()
+        
+        # Normalizar URLs
+        if 'post_url' in df_existing.columns:
+            df_existing['post_url'] = df_existing['post_url'].apply(normalize_url)
+        
+        return df_existing
+    except Exception as e:
+        logger.error(f"Error loading existing file: {e}")
+        return pd.DataFrame()
+
+
+def is_registry_entry(row):
+    """Determina si una fila es una entrada de registro (pauta sin comentarios)"""
+    if 'comment_text' not in row.index:
+        return True
+    comment = row['comment_text']
+    if pd.isna(comment):
+        return True
+    if isinstance(comment, str) and comment.strip() == '':
+        return True
+    return False
+
+
+def create_comment_id(row):
+    """Crea un identificador único para cada comentario"""
+    if is_registry_entry(row):
+        post_url = row.get('post_url', '') if 'post_url' in row.index else ''
+        normalized_url = normalize_url(post_url)
+        if not normalized_url:
+            platform = str(row.get('platform', 'unknown')) if 'platform' in row.index else 'unknown'
+            return f"REGISTRY|NO_URL|{platform}"
+        return f"REGISTRY|{normalized_url}"
+    
+    # Platform
+    platform = str(row['platform']) if 'platform' in row.index and pd.notna(row['platform']) else ''
+    platform = platform.strip().lower()
+    
+    # Author - CORREGIDO: manejar NaN apropiadamente
+    author = ''
+    if 'author_name' in row.index and pd.notna(row['author_name']):
+        author = str(row['author_name']).strip().lower()
+        # Si después de convertir es 'nan', tratarlo como vacío
+        if author == 'nan':
+            author = ''
+    
+    # Post URL - NUEVO: agregar URL al ID para mayor especificidad
+    post_url = ''
+    if 'post_url' in row.index and pd.notna(row['post_url']):
+        post_url = str(row['post_url']).strip().lower()
+    
+    # Text
+    text = ''
+    if 'comment_text' in row.index and pd.notna(row['comment_text']):
+        text = str(row['comment_text']).strip().lower()
+        text = unicodedata.normalize('NFC', text)
+    
+    # Date - usar la fecha para diferenciar comentarios idénticos
+    date_str = ''
+    if 'created_time_processed' in row.index and pd.notna(row['created_time_processed']):
+        date_str = str(row['created_time_processed'])
+    elif 'created_time' in row.index and pd.notna(row['created_time']):
+        date_str = str(row['created_time'])
+    
+    # MEJORADO: Incluir más información para evitar falsos duplicados
+    # Especialmente importante para comentarios cortos o emojis
+    unique_id = f"{platform}|{post_url}|{author}|{text}|{date_str}"
+    return unique_id
+
+
+def merge_comments(df_existing, df_new):
+    """Combina comentarios existentes con nuevos, evitando duplicados"""
+    if df_existing.empty:
+        return df_new
+    if df_new.empty:
+        return df_existing
+    
+    logger.info(f"Merging: {len(df_existing)} existing + {len(df_new)} new rows")
+    
+    df_existing['_comment_id'] = df_existing.apply(create_comment_id, axis=1)
+    df_new['_comment_id'] = df_new.apply(create_comment_id, axis=1)
+    
+    existing_ids = set(df_existing['_comment_id'])
+    new_ids = set(df_new['_comment_id'])
+    unique_new_ids = new_ids - existing_ids
+    
+    df_truly_new = df_new[df_new['_comment_id'].isin(unique_new_ids)].copy()
+    logger.info(f"Adding {len(df_truly_new)} new unique entries")
+    
+    df_combined = pd.concat([df_existing, df_truly_new], ignore_index=True)
+    df_combined = df_combined.drop(columns=['_comment_id'])
+    
+    return df_combined
+
+
 def save_to_excel(df, filename):
+    """Guarda el DataFrame en Excel"""
     try:
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='Comentarios', index=False)
             if not df.empty and 'post_number' in df.columns:
-                summary = df.groupby(['post_number', 'platform', 'post_url']).agg(Total_Comentarios=('comment_text', 'count'), Total_Likes=('likes_count', 'sum')).reset_index()
+                summary = df.groupby(['post_number', 'platform', 'post_url']).agg(
+                    Total_Comentarios=('comment_text', 'count'),
+                    Total_Likes=('likes_count', 'sum')
+                ).reset_index()
                 summary.to_excel(writer, sheet_name='Resumen_Posts', index=False)
         logger.info(f"Excel file saved successfully: {filename}")
         return True
@@ -231,29 +498,44 @@ def save_to_excel(df, filename):
         logger.error(f"Error saving Excel file: {e}")
         return False
 
+
 def process_datetime_columns(df):
-    if 'created_time' not in df.columns: return df
-    logger.info("Processing datetime columns...")
+    """Procesa las columnas de fecha/hora"""
+    if 'created_time' not in df.columns:
+        return df
+    
     df['created_time_processed'] = pd.to_datetime(df['created_time'], errors='coerce', utc=True, unit='s')
     mask = df['created_time_processed'].isna()
     df.loc[mask, 'created_time_processed'] = pd.to_datetime(df.loc[mask, 'created_time'], errors='coerce', utc=True)
+    
     if df['created_time_processed'].notna().any():
         df['created_time_processed'] = df['created_time_processed'].dt.tz_localize(None)
         df['fecha_comentario'] = df['created_time_processed'].dt.date
         df['hora_comentario'] = df['created_time_processed'].dt.time
+    
     return df
 
+
 def run_extraction():
+    """Función principal que ejecuta todo el proceso de extracción"""
+    logger.info("=" * 60)
     logger.info("--- STARTING COMMENT EXTRACTION PROCESS ---")
+    logger.info("=" * 60)
+    
     if not APIFY_TOKEN:
         logger.error("APIFY_TOKEN not found in environment variables. Aborting.")
         return
 
     valid_urls = [url.strip() for url in URLS_A_PROCESAR if url.strip()]
+    logger.info(f"URLs to process: {len(valid_urls)}")
+    
     if not valid_urls:
         logger.warning("No valid URLs to process. Exiting.")
         return
 
+    filename = "Comentarios Campaña.xlsx"
+    df_existing = load_existing_comments(filename)
+    
     scraper = SocialMediaScraper(APIFY_TOKEN)
     all_comments = []
     post_counter = 0
@@ -262,42 +544,93 @@ def run_extraction():
         post_counter += 1
         platform = scraper.detect_platform(url)
         comments = []
+        
         if platform == 'facebook':
             comments = scraper.scrape_facebook_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
         elif platform == 'instagram':
             comments = scraper.scrape_instagram_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
         elif platform == 'tiktok':
             comments = scraper.scrape_tiktok_comments(url, campaign_info=CAMPAIGN_INFO, post_number=post_counter)
-        else:
-            logger.warning(f"Unknown platform for URL: {url}")
         
-        all_comments.extend(comments)
-        # --- MODIFICACIÓN CLAVE ---
+        if not comments:
+            registry_entry = create_post_registry_entry(url, platform, CAMPAIGN_INFO)
+            registry_entry['post_number'] = post_counter
+            all_comments.append(registry_entry)
+        else:
+            all_comments.extend(comments)
+        
         if not SOLO_PRIMER_POST and post_counter < len(valid_urls):
-            # Pausa aleatoria entre 1 y 2 minutos para simular comportamiento humano
-            pausa_aleatoria = random.uniform(60, 120) 
-            logger.info(f"Pausing for {pausa_aleatoria:.2f} seconds to avoid detection...")
-            time.sleep(pausa_aleatoria)
-        # --- FIN DE LA MODIFICACIÓN ---
+            pausa = random.uniform(60, 120)
+            logger.info(f"Pausing for {pausa:.2f} seconds...")
+            time.sleep(pausa)
 
     if not all_comments:
-        logger.warning("No comments were extracted. Process finished.")
-        # Pequeña corrección: si no hay comentarios, no se debería intentar guardar un excel vacío
-        # y dar un error, sino terminar limpiamente.
+        if not df_existing.empty:
+            save_to_excel(df_existing, filename)
         return
 
-    logger.info("--- PROCESSING FINAL RESULTS ---")
-    df_comments = pd.DataFrame(all_comments)
-    df_comments = process_datetime_columns(df_comments)
+    df_new_comments = pd.DataFrame(all_comments)
+    df_new_comments = process_datetime_columns(df_new_comments)
     
-    final_columns = ['post_number', 'platform', 'campaign_name', 'post_url', 'author_name', 'comment_text', 'created_time_processed', 'fecha_comentario', 'hora_comentario', 'likes_count', 'replies_count', 'is_reply', 'author_url', 'created_time_raw']
-    existing_cols = [col for col in final_columns if col in df_comments.columns]
-    df_comments = df_comments[existing_cols]
+    # Normalizar datos
+    if 'comment_text' in df_new_comments.columns:
+        df_new_comments['comment_text'] = df_new_comments['comment_text'].replace('', pd.NA)
+    if 'post_url' in df_new_comments.columns:
+        df_new_comments['post_url'] = df_new_comments['post_url'].apply(normalize_url)
+    
+    df_combined = merge_comments(df_existing, df_new_comments)
+    
+    # Limpiar registry entries obsoletas
+    is_registry_mask = df_combined.apply(is_registry_entry, axis=1)
+    urls_with_comments = set(df_combined[~is_registry_mask]['post_url'].dropna().unique())
+    
+    if urls_with_comments:
+        df_combined = df_combined[~(is_registry_mask & df_combined['post_url'].isin(urls_with_comments))].copy()
+    
+    df_combined = assign_consistent_post_numbers(df_combined)
+    
+    # Ordenar
+    df_with_comments = df_combined[df_combined['comment_text'].notna()].copy()
+    df_without_comments = df_combined[df_combined['comment_text'].isna()].copy()
+    
+    if not df_with_comments.empty and 'created_time_processed' in df_with_comments.columns:
+        df_with_comments = df_with_comments.sort_values('created_time_processed', ascending=False)
+    
+    df_combined = pd.concat([df_with_comments, df_without_comments], ignore_index=True)
+    
+    # Organizar columnas
+    final_columns = [
+        'post_number', 'platform', 'campaign_name', 'post_url', 'post_url_original',
+        'author_name', 'comment_text', 'created_time_processed', 
+        'fecha_comentario', 'hora_comentario', 'likes_count', 
+        'replies_count', 'is_reply', 'author_url', 'created_time_raw'
+    ]
+    existing_cols = [col for col in final_columns if col in df_combined.columns]
+    df_combined = df_combined[existing_cols]
 
-    filename = "Comentarios Campaña.xlsx"
-    save_to_excel(df_comments, filename)
+    save_to_excel(df_combined, filename)
+    
+    total_comments = df_combined['comment_text'].notna().sum()
+    total_posts = df_combined['post_url'].nunique()
+    
+    logger.info("=" * 60)
     logger.info("--- EXTRACTION PROCESS FINISHED ---")
+    logger.info(f"Total unique posts tracked: {total_posts}")
+    logger.info(f"Total comments in file: {total_comments}")
+    logger.info(f"File saved: {filename}")
+    logger.info("=" * 60)
+
 
 if __name__ == "__main__":
     run_extraction()
+
+
+
+
+
+
+
+
+
+
 
